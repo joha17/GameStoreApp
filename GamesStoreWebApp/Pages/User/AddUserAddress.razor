@@ -1,0 +1,66 @@
+﻿@page "/userAddressInsert"
+@using Newtonsoft.Json;
+@inject IUserAddressService UserAddressService
+@inject NavigationManager NavigationManager
+
+<h3>Agregar direccion de envio</h3>
+
+@Message
+
+<EditForm Model="@userAddress" OnSubmit="Insert">
+    <div class="form-group">
+        <label>Pais</label>
+        <input type="text" class="form-control" @bind="userAddress.CountryCode">
+    </div>
+    <div class="form-group">
+        <label>Ciudad</label>
+        <input type="text" class="form-control" @bind="userAddress.City">
+    </div>
+    <div class="form-group">
+        <label>Direccion 1</label>
+        <input type="text" class="form-control" @bind="userAddress.FirstAddress">
+    </div>
+    <div class="form-group">
+        <label>Direccion 2</label>
+        <input type="text" class="form-control" @bind="userAddress.SecondAddress">
+    </div>
+    
+    <div class="form-group">
+        <label>Codigo Postal</label>
+        <input type="text" class="form-control" @bind="userAddress.ZipCode">
+    </div>
+
+    <button type="submit" class="btn btn-warning">Agregar</button>
+    <a class="btn btn-dark" href="/userAddressDetails" role="button">Regresar</a>
+</EditForm>
+
+@code {
+    UserAddress userAddress = new UserAddress();
+    public string Message { get; set; }
+    public string userName = string.Empty;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+        userName = user.Identity.Name.ToString();
+    }
+
+    protected async Task Insert()
+    {
+        userAddress.UserName = userName;
+        var postData = JsonConvert.SerializeObject(userAddress);
+        HttpResponseMessage result;
+        result = await UserAddressService.InsertUserAddress(postData);
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/userAddressDetails");
+        }
+        else
+        {
+            Message = "Error insertando Datos. " + result.Headers.ToString();
+        }
+    }
+}

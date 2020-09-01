@@ -1,0 +1,85 @@
+﻿@page "/productInsert"
+@using Newtonsoft.Json;
+@inject IProductService ProductService
+@inject NavigationManager NavigationManager
+
+<h3>Agregar Producto</h3>
+
+@if (@Message != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @Message
+    </div>
+}
+
+<EditForm Model="@product" OnSubmit="Insert">
+    <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" class="form-control" @bind="product.ProductName">
+    </div>
+    <div class="form-group">
+        <label>Descripcion</label>
+        <input type="text" class="form-control" @bind="product.Description">
+    </div>
+    <div class="form-group">
+        <label>Precio</label>
+        <input type="text" class="form-control" @bind="product.Price">
+    </div>
+    <div class="form-group">
+        <label>Descuento</label>
+        <input type="text" class="form-control" @bind="product.Discount">
+    </div>
+    <div class="form-group">
+        <label>Categoria</label>
+        <select class="form-control" @bind="@product.CategoryId">
+
+            <option value="">--Seleccione una Categoria--</option>
+            @foreach (var category in categories)
+            {
+                if (product.CategoryId == category.IdCategory)
+                {
+                    <option selected value="@category.IdCategory"> @category.CategoryName </option>
+                }
+                else
+                {
+                    <option value="@category.IdCategory"> @category.CategoryName </option>
+                }
+
+            }
+        </select>
+    </div>
+    <div class="form-group">
+        <label>URL Imagen</label>
+        <input type="text" class="form-control" @bind="product.ImageUrl">
+    </div>
+
+    <button type="submit" class="btn btn-warning">Agregar</button>
+    <a class="btn btn-dark" href="/products" role="button">Regresar</a>
+</EditForm>
+
+@code {
+    Product product = new Product();
+    public string Message { get; set; }
+    private List<Category> categories = new List<Category>();
+    private string categoryId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ProductService.GetCategories();
+    }
+
+    protected async Task Insert()
+    {
+        var postData = JsonConvert.SerializeObject(product);
+        HttpResponseMessage result;
+        result = await ProductService.InsertProduct(postData);
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/products");
+        }
+        else
+        {
+            Message = "Error insertando Datos. " + result.Headers.ToString();
+        }
+    }
+}

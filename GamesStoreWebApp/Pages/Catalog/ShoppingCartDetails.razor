@@ -1,0 +1,100 @@
+﻿@page "/shoppingCartDetails"
+@inject IProductService ProductService
+@inject Blazored.LocalStorage.ILocalStorageService oLocalStore
+@inject NavigationManager NavigationManager
+
+<h2>Mi carrito de Compras</h2>
+
+@if (productsByUser == null)
+{
+    <p><em>Carrito Vacio</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Producto</th>
+                <th scope="col">Description</th>
+                <th scope="col">Cantidad</th>
+                <th scope="col">Precio Unidad</th>
+                <th scope="col">Descuento</th>
+                <th scope="col">Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in productsByUser)
+            {
+            <tr>
+                <th scope="row">@item.ProductName</th>
+                <td>@item.Description</td>
+                <td>@item.Quantity</td>
+                <td>$@item.Price</td>
+                <td>@item.Discount</td>
+                <td>$@item.Subtotal</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger" @onclick="@(e => DeleteItem(item.IdProduct))">Eliminar</button>
+                </td>
+            </tr>
+            }
+            <tr>
+                <th scope="row">Total</th>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td scope="row">$@productsByUser.Sum(p=>p.Subtotal)</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <button class="btn btn-warning" @onclick="ClearLocalStorage">Vaciar carrito</button>
+    <a class="btn btn-warning" href="/checkout">Pagar</a>
+
+}
+
+
+@code {
+
+    public List<Models.ShoppingCart> products { get; set; }
+    public List<Models.ShoppingCart> productsByUser { get; set; }
+    public string userName = string.Empty;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await oLocalStore.GetItemAsync<List<Models.ShoppingCart>>("List");
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+        userName = user.Claims.FirstOrDefault(
+            c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value;
+        if (userName == null)
+        {
+            userName = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
+        }
+        productsByUser = products.Where(x => x.UsernameOrder == userName).ToList();
+    }
+
+    public async void ClearLocalStorage()
+    {
+        products.RemoveAll(x => x.UsernameOrder == userName);
+        await oLocalStore.SetItemAsync("List", products);
+        productsByUser = await oLocalStore.GetItemAsync<List<Models.ShoppingCart>>("List");
+        //productsByUser = productsByUser.Where(x => x.UsernameOrder == userName).ToList();
+        StateHasChanged();
+    }
+
+    public async void DeleteItem(int id)
+    {
+        var itemDelete = products.Find(x => x.IdProduct == id && x.UsernameOrder == userName);
+        products.Remove(itemDelete);
+        await oLocalStore.SetItemAsync("List", products);
+        productsByUser = await oLocalStore.GetItemAsync<List<Models.ShoppingCart>>("List");
+        //productsByUser = productsByUser.Where(x => x.UsernameOrder == userName).ToList();
+        StateHasChanged();
+    }
+
+}

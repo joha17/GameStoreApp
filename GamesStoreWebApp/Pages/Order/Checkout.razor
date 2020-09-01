@@ -1,0 +1,148 @@
+﻿@page "/checkout"
+@inject Blazored.LocalStorage.ILocalStorageService oLocalStore
+@inject NavigationManager NavigationManager
+@inject IOrderDetailsService OrderDetailsService
+@using Newtonsoft.Json;
+
+@if (productsByUser == null)
+{
+    <p><em>Carrito Vacio</em></p>
+}
+else
+{
+    <div class="jumbotron jumbotron-fluid">
+        <div class="container">
+            <h4>Confirmarcion de pedido</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Producto</th>
+                        <th scope="col">Description</th>
+                        <th scope="col">Cantidad</th>
+                        <th scope="col">Precio Unidad</th>
+                        <th scope="col">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in productsByUser)
+                    {
+                        <tr>
+                            <th scope="row">@item.ProductName</th>
+                            <td>@item.Description</td>
+                            <td>@item.Quantity</td>
+                            <td>$@item.Price</td>
+                            <td>$@item.Subtotal</td>
+                        </tr>
+                    }
+                    <tr>
+                        <th scope="row">Total</th>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td scope="row">$@productsByUser.Sum(p => p.Subtotal)</td>
+                    </tr>
+
+                </tbody>
+            </table>
+            <br />
+            <h5>Datos de Pago</h5>
+            <form>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="formGroupExampleInput">Número de Tarjeta</label>
+                        <input type="text" class="form-control" id="formGroupExampleInput" placeholder="Visa, MasterCard o AMEX" minlength="16" maxlength="19" required>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="formGroupExampleInput">Fecha de expiración</label>
+                        <input type="text" class="form-control" id="formGroupExampleInput" placeholder="YY/MM" minlength="5" required>
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label for="formGroupExampleInput2">Código de Seguridad</label>
+                        <input type="text" class="form-control" id="formGroupExampleInput2" placeholder="Codigo CVV" minlength="3" required>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <button class="btn btn-success" @onclick="@SaveOrder">Completar Compra</button>
+
+}
+
+@code {
+
+    public List<Models.ShoppingCart> products { get; set; }
+    public List<Models.ShoppingCart> productsByUser { get; set; }
+    public List<Models.OrderDetail> orders { get; set; }
+    public string username = string.Empty;
+    public int orderId;
+    public int lastOrderId;
+    public int newOrderId;
+    public DateTime orderDate = DateTime.Now;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    Models.OrderDetail orderDetail = new Models.OrderDetail();
+    public string Message { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+        username = user.Claims.FirstOrDefault(
+                c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value;
+        if (username == null)
+        {
+            username = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
+        }
+        products = await oLocalStore.GetItemAsync<List<Models.ShoppingCart>>("List");
+        orders = await OrderDetailsService.GetAllOrderDetails();
+        if (orders.Count() == 0)
+        {
+            lastOrderId = 1;
+        }
+        else
+        {
+            lastOrderId = orders.LastOrDefault().OrderId;
+        }
+
+        productsByUser = products.Where(x => x.UsernameOrder == username).ToList();
+    }
+
+    protected async Task SaveOrder()
+    {
+        newOrderId = lastOrderId + 1;
+
+        foreach (var item in productsByUser)
+        {
+            orderDetail.Quantity = item.Quantity;
+            orderDetail.Amount = item.Price;
+            orderDetail.Subtotal = item.Subtotal;
+            orderDetail.UserName = username;
+            orderDetail.OrderDate = orderDate;
+            orderDetail.OrderStatus = "Completado";
+            orderDetail.IdProduct = item.IdProduct;
+            orderDetail.OrderId = newOrderId;
+            HttpResponseMessage result;
+            var postData = JsonConvert.SerializeObject(orderDetail);
+            result = await OrderDetailsService.InsertOrderDetails(postData);
+
+            if (!result.IsSuccessStatusCode)
+            {
+                Message = "Error actualizando el registro. " + result.Headers.ToString();
+            }
+        }
+        ClearLocalStorage();
+        NavigationManager.NavigateTo("/orderDetails/" + newOrderId);
+    }
+
+    public async void ClearLocalStorage()
+    {
+        products.RemoveAll(x => x.UsernameOrder == username);
+        await oLocalStore.SetItemAsync("List", products);
+        productsByUser = await oLocalStore.GetItemAsync<List<Models.ShoppingCart>>("List");
+        productsByUser = productsByUser.Where(x => x.UsernameOrder == username).ToList();
+    }
+
+}

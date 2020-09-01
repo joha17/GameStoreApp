@@ -1,0 +1,98 @@
+﻿@page "/login"
+@layout LoginLayout
+@inject IAuthenticationService AuthenticationService
+@inject Blazored.LocalStorage.ILocalStorageService oLocalStore
+@inject NavigationManager NavigationManager
+
+<style>
+    .login-form {
+        width: 340px;
+        margin: 50px auto;
+        font-size: 15px;
+    }
+
+        .login-form form {
+            margin-bottom: 15px;
+            background: #f7f7f7;
+            box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        .login-form h2 {
+            margin: 0 0 15px;
+        }
+
+    .form-control, .btn {
+        min-height: 38px;
+        border-radius: 2px;
+    }
+
+    .btn {
+        font-size: 15px;
+        font-weight: bold;
+    }
+</style>
+
+@if (ShowErrors)
+{
+    <div class="alert alert-danger" role="alert">
+        <p>@Error</p>
+    </div>
+}
+
+<div class="login-form">
+    <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <h2 class="text-center">Log in</h2>
+        <div class="form-group">
+            @*<input type="text" class="form-control" placeholder="Username" required="required">*@
+            <InputText Class="form-control" @bind-Value="loginModel.UserName" placeholder="Username" />
+            <ValidationMessage For="@(() => loginModel.UserName)" />
+        </div>
+        <div class="form-group">
+            @*<input type="password" class="form-control" placeholder="Password" required="required">*@
+            <InputText Id="password" type="password" Class="form-control" @bind-Value="loginModel.Password" placeholder="Password" />
+            <ValidationMessage For="@(() => loginModel.Password)" />
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary btn-block">Log in</button>
+        </div>
+        @*<div class="clearfix">
+                <label class="float-left form-check-label"><input type="checkbox"> Remember me</label>
+                <a href="#" class="float-right">Forgot Password?</a>
+            </div>*@
+    </EditForm>
+    <p class="text-center"><a href="/register">Registrarse</a></p>
+</div>
+
+@code {
+
+    private LoginModel loginModel = new LoginModel();
+    private bool ShowErrors;
+    private string Error = "";
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private async Task HandleLogin()
+    {
+        ShowErrors = false;
+
+        var result = await AuthenticationService.Login(loginModel);
+
+        if (result.Successful)
+        {
+            var authState = await authenticationStateTask;
+            var user = authState.User;
+            //await oLocalStore.SetItemAsync("userName", user.Identity.Name.ToString());
+            //await oLocalStore.SetItemAsync("token", result.Token);
+            NavigationManager.NavigateTo("/productsCatalog");
+        }
+        else
+        {
+            Error = result.Error;
+            ShowErrors = true;
+        }
+    }
+
+}

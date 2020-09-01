@@ -1,0 +1,101 @@
+﻿@inject IUserService UserService
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">Games Store</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        <AuthorizeView>
+            <Authorized>
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="productsCatalog" Match="NavLinkMatch.All">
+                        <span class="oi oi-dashboard" aria-hidden="true"></span> Catologo
+                    </NavLink>
+                </li>
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="userAddressDetails">
+                        <span class="oi oi-person" aria-hidden="true"></span> Mis Datos
+                    </NavLink>
+                </li>
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="myOrders">
+                        <span class="oi oi-basket" aria-hidden="true"></span> Mis Ordenes
+                    </NavLink>
+                </li>
+                @if (!role.Equals(string.Empty))
+                {
+                    if (role.Equals("Admin"))
+                    {
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="categories">
+                                <span class="oi oi-list-rich" aria-hidden="true"></span> Categorias
+                            </NavLink>
+                        </li>
+                        <li class="nav-item px-3">
+                            <NavLink class="nav-link" href="products">
+                                <span class="oi oi-box" aria-hidden="true"></span> Productos
+                            </NavLink>
+                        </li>
+                    }
+                }
+            </Authorized>
+            <NotAuthorized>
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="productsCatalog" Match="NavLinkMatch.All">
+                        <span class="oi oi-dashboard" aria-hidden="true"></span> Catologo
+                    </NavLink>
+                </li>
+            </NotAuthorized>
+        </AuthorizeView>
+
+    </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    private string role = string.Empty;
+    private string username = string.Empty;
+    private UserInfo userinfo = new UserInfo();
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            username = user.Claims.FirstOrDefault(
+            c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value;
+            if (username == null)
+            {
+                role = user.Claims.FirstOrDefault(c => c.Type == "role").Value;
+            }
+            else
+            {
+                userinfo = await UserService.GetUsersDetails(username);
+
+                role = user.Claims.FirstOrDefault(
+                c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
+
+                if (role == null)
+                {
+                    role = userinfo.UserRole.ToString();
+                }
+            }
+
+
+        }
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

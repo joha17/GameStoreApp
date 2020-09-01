@@ -1,0 +1,84 @@
+﻿@page "/userAddressDetails"
+@inject IUserAddressService UserAddressService
+@inject IUserService UserService
+@inject Blazored.LocalStorage.ILocalStorageService oLocalStore
+
+<h3>Informacion de Usuario</h3>
+
+@if (userinfo.UserName == null)
+{
+    <p>No tienes informacion personal</p>
+    @Message
+
+}
+else
+{
+<div class="jumbotron">
+    <h5>Informacion de Personal</h5>
+    <hr class="my-4">
+    <p><strong>Usuario: </strong>@userinfo.UserName</p>
+    <p><strong>Nombre: </strong>@userinfo.FirstName</p>
+    <p><strong>Apellidos: </strong>@userinfo.LastName </p>
+    <p><strong>Email: </strong>@userinfo.EmailId</p>
+    <p><strong>Telefono: </strong>@userinfo.PhoneNumber</p>
+    <br>
+    <a class="btn btn-warning" href="editUser/@userAddress.UserName" role="button">Editar</a>
+</div>
+}
+
+@if (userAddress.UserName == null)
+{
+    <p>No tienes informacion de Envio</p>
+    <a class="btn btn-success" href="userAddressInsert" role="button">Agregar informacion de envio</a>
+    @Message
+
+}
+else
+{
+<div class="jumbotron">
+    <h5>Informacion de Envio</h5>
+    <hr class="my-4">
+    <p><strong>Codigo de Pais: </strong>@userAddress.CountryCode</p>
+    <p><strong>Ciudad: </strong>@userAddress.City</p>
+    <p><strong>Direccion 1: </strong>@userAddress.FirstAddress</p>
+    <p><strong>Direccion 2: </strong>@userAddress.SecondAddress</p>
+    <p><strong>Codigo postal: </strong>@userAddress.ZipCode</p>
+    <br>
+    <a class="btn btn-warning" href="editUserAddress/@userAddress.UserName" role="button">Editar</a>
+</div>
+}
+
+@code {
+
+    [Parameter]
+    public string username { get; set; }
+
+    private UserAddress userAddress = new UserAddress();
+    private UserInfo userinfo = new UserInfo();
+    public string Message { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await authenticationStateTask;
+            var user = authState.User;
+            username = user.Claims.FirstOrDefault(
+            c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value;
+            if (username == null)
+            {
+                username = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
+            }
+            userAddress = await UserAddressService.GetUserAddressDetails(username);
+            userinfo = await UserService.GetUsersDetails(username);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+    }
+
+}

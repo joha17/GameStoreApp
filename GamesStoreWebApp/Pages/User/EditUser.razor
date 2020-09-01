@@ -1,0 +1,97 @@
+﻿@page "/editUser/{UserName}"
+@using Newtonsoft.Json;
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+
+<h3>Actualizar Usuario</h3>
+@if (Message != null)
+{
+<div class="alert alert-danger" role="alert">
+    @Message
+</div>
+}
+
+
+<EditForm Model="@userInfo" OnSubmit="Update">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="form-group">
+        <label>Username</label>
+        <InputText class="form-control" @bind-Value="@userInfo.UserName" />
+        <ValidationMessage For="@(() => @userInfo.UserName)" />
+    </div>
+    <div class="form-group">
+        <label>Nombre</label>
+        <InputText class="form-control" @bind-Value="@userInfo.FirstName" />
+        <ValidationMessage For="@(() => @userInfo.LastName)" />
+    </div>
+    <div class="form-group">
+        <label>Apellidos</label>
+        <InputText class="form-control" @bind-Value="@userInfo.LastName" />
+        <ValidationMessage For="@(() => @userInfo.LastName)" />
+    </div>
+    <div class="form-group">
+        <label>Email</label>
+        <InputText class="form-control" @bind-Value="@userInfo.EmailId" />
+        <ValidationMessage For="@(() => @userInfo.EmailId)" />
+    </div>
+    <div class="form-group">
+        <label>Telefono</label>
+        <InputText class="form-control" @bind-Value="@userInfo.PhoneNumber" />
+        <ValidationMessage For="@(() => @userInfo.PhoneNumber)" />
+    </div>
+    <div class="form-group">
+        <label>Contraseña</label>
+        <InputText class="form-control" type="password" @bind-Value="@userInfo.Password" />
+        <ValidationMessage For="@(() => @userInfo.Password)" />
+    </div>
+    <div class="form-group">
+        <label>Confirme su contraseña</label>
+        <InputText class="form-control" type="password" @bind-Value="@userInfo.ConfirmPassword" />
+        <ValidationMessage For="@(() => @userInfo.ConfirmPassword)" />
+    </div>
+
+    <button type="submit" class="btn btn-warning">Editar</button>
+    <button class="btn btn-dark" @onclick="@Cancel">Regresar</button>
+</EditForm>
+
+
+@code {
+    [Parameter]
+    public string username { get; set; }
+
+    public string Message { get; set; }
+    private UserInfo userInfo = new UserInfo();
+
+    protected override async Task OnInitializedAsync()
+    {
+        userInfo = await UserService.GetUsersDetails(username);
+    }
+
+    protected async Task Update()
+    {
+        HttpResponseMessage result;
+        if (userInfo.Password != userInfo.ConfirmPassword)
+        {
+            Message = "Contraseñas no coinciden";
+        }
+        else
+        {
+            result = await UserService.UpdateUser(JsonConvert.SerializeObject(userInfo), userInfo.UserName);
+
+            if (result.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/userAddressDetails", forceLoad: true);
+            }
+            else
+            {
+                Message = "Error actualizando el registro" + result.Headers.ToString();
+            }
+        }
+    }
+
+    protected void Cancel()
+    {
+        NavigationManager.NavigateTo("userAddressDetails", forceLoad: true);
+    }
+}

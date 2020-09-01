@@ -1,0 +1,44 @@
+﻿@page "/categoryInsert"
+@using Newtonsoft.Json;
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+
+<h3>Agregar Categoria</h3>
+
+<EditForm Model="@category" OnSubmit="Insert">
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" class="form-control" @bind="category.CategoryName">
+        </div>
+        <div class="form-group">
+            <label>Descripcion</label>
+            <textarea class="form-control" @bind="category.Description" rows="3"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-warning">Agregar</button>
+        <a class="btn btn-dark" href="/categories" role="button">Regresar</a>
+</EditForm>
+
+@code {
+    private Category category = new Category();
+    public string Message { get; set; }
+
+
+    protected async Task Insert()
+    {
+        HttpResponseMessage result;
+        var postData = JsonConvert.SerializeObject(category);
+        result = await CategoryService.InsertCategory(postData);
+
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/categories", forceLoad: true);
+        }
+        else
+        {
+            Message = "Error actualizando el registro. " + result.Headers.ToString();
+        }
+
+    }
+
+}

@@ -1,0 +1,90 @@
+﻿@page "/productUpdate/{idProduct:int}"
+@using Newtonsoft.Json;
+@inject IProductService ProductService
+@inject NavigationManager NavigationManager
+
+<h3>Actualizar Producto</h3>
+@Message
+
+<EditForm Model="@product" OnSubmit="Update">
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" class="form-control" @bind="product.ProductName">
+        </div>
+        <div class="form-group">
+            <label>Descripcion</label>
+            <input type="text" class="form-control" @bind="product.Description">
+        </div>
+        <div class="form-group">
+            <label>Precio</label>
+            <input type="text" class="form-control" @bind="product.Price">
+        </div>
+        <div class="form-group">
+            <label>Descuento</label>
+            <input type="text" class="form-control" @bind="product.Discount">
+        </div>
+        <div class="form-group">
+            <label>Categoria</label>
+            <select class="form-control" @bind="@product.CategoryId">
+
+                <option value="">--Seleccione una Categoria--</option>
+                @foreach (var category in categories)
+                {
+                    if (product.CategoryId == category.IdCategory)
+                    {
+                        <option selected value="@category.IdCategory"> @category.CategoryName </option>
+                    }
+                    else
+                    {
+                        <option value="@category.IdCategory"> @category.CategoryName </option>
+                    }
+
+                }
+            </select>
+        </div>
+        <div class="form-group">
+            <label>URL Imagen</label>
+            <input type="text" class="form-control" @bind="product.ImageUrl">
+        </div>
+
+        <button type="submit" class="btn btn-warning">Editar</button>
+        <button class="btn btn-dark" @onclick="@Cancel">Regresar</button>
+</EditForm>
+
+@code {
+
+    [Parameter]
+    public int idProduct { get; set; }
+
+    public string Message { get; set; }
+    private Product product = new Product();
+    private List<Category> categories = new List<Category>();
+    private string categoryId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await ProductService.GetProductDetails(idProduct);
+        categories = await ProductService.GetCategories();
+    }
+
+    protected async Task Update()
+    {
+        HttpResponseMessage result;
+        result = await ProductService.UpdateProduct(JsonConvert.SerializeObject(product), product.IdProduct);
+
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/products", forceLoad: true);
+        }
+        else
+        {
+            Message = "Error actualizando el registro" + result.Headers.ToString();
+        }
+
+    }
+
+    protected void Cancel()
+    {
+        NavigationManager.NavigateTo("products", forceLoad: true);
+    }
+}

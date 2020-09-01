@@ -1,0 +1,80 @@
+﻿@page "/editUserAddress/{UserName}"
+@using Newtonsoft.Json;
+@inject IUserAddressService UserAddressService
+@inject NavigationManager NavigationManager
+
+<h3>Actualizar informacion de Envio</h3>
+@if (Message != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @Message
+    </div>
+}
+
+
+<EditForm Model="@userAddress" OnSubmit="Update">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="form-group">
+        <label>Pais</label>
+        <InputText class="form-control" @bind-Value="@userAddress.CountryCode" />
+        <ValidationMessage For="@(() => userAddress.CountryCode)" />
+    </div>
+    <div class="form-group">
+        <label>Ciudad</label>
+        <InputText class="form-control" @bind-Value="@userAddress.City" />
+        <ValidationMessage For="@(() => userAddress.City)" />
+    </div>
+    <div class="form-group">
+        <label>Direccion 1</label>
+        <InputText class="form-control" @bind-Value="@userAddress.FirstAddress" />
+        <ValidationMessage For="@(() => userAddress.FirstAddress)" />
+    </div>
+    <div class="form-group">
+        <label>Direccion 2</label>
+        <InputText class="form-control" @bind-Value="@userAddress.SecondAddress" />
+        <ValidationMessage For="@(() => userAddress.SecondAddress)" />
+    </div>
+    <div class="form-group">
+        <label>Codigo Postal</label>
+        <InputText class="form-control" @bind-Value="@userAddress.ZipCode" />
+        <ValidationMessage For="@(() => userAddress.ZipCode)" />
+    </div>
+
+    <button type="submit" class="btn btn-warning">Editar</button>
+    <button class="btn btn-dark" @onclick="@Cancel">Regresar</button>
+</EditForm>
+
+
+@code {
+    [Parameter]
+    public string username { get; set; }
+
+    public string Message { get; set; }
+    private UserAddress userAddress = new UserAddress();
+
+    protected override async Task OnInitializedAsync()
+    {
+        userAddress = await UserAddressService.GetUserAddressDetails(username);
+    }
+
+    protected async Task Update()
+    {
+        HttpResponseMessage result;
+        result = await UserAddressService.UpdateUserAddress(JsonConvert.SerializeObject(userAddress), userAddress.UserName);
+
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/userAddressDetails", forceLoad: true);
+        }
+        else
+        {
+            Message = "Error actualizando el registro" + result.Headers.ToString();
+        }
+    }
+
+    protected void Cancel()
+    {
+        NavigationManager.NavigateTo("userAddressDetails", forceLoad: true);
+    }
+}

@@ -1,0 +1,51 @@
+﻿@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService olocalStorage;
+
+<div class="alert alert-secondary mt-4" role="alert">
+    <span class="oi oi-pencil mr-2" aria-hidden="true"></span>
+    <strong>@Title</strong>
+
+    <span class="text-nowrap">
+        Please take our
+        <a target="_blank" class="font-weight-bold" href="https://go.microsoft.com/fwlink/?linkid=2112271">brief survey</a>
+    </span>
+    and tell us what you think.
+</div>
+
+@code {
+    // Demonstrates how a parent component can supply parameters
+    [Parameter]
+    public string Title { get; set; }
+
+    string username = null;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated.Equals(true))
+        {
+            username = user.Claims.FirstOrDefault(
+                c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value;
+            if (username == null)
+            {
+                username = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
+            }
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/login");
+        }
+
+        //var token = await olocalStorage.GetItemAsync<string>("token");
+        //var savedToken = await olocalStorage.GetItemAsync<string>("authToken");
+
+        //if (username == null)
+        //{
+        //    NavigationManager.NavigateTo("/logout");
+        //}
+    }
+}

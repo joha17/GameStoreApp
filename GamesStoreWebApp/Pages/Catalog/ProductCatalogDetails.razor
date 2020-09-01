@@ -1,0 +1,361 @@
+﻿@page "/productCatalogDetails/{idProduct:int}"
+@inject IShoppingCartService ShoppingCartService
+@inject IReviewService ReviewService
+@inject Blazored.LocalStorage.ILocalStorageService oLocalStore
+@using Newtonsoft.Json;
+@inject NavigationManager NavigationManager
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="~/css/userRating.css" />
+<style>
+    .checked {
+        color: orange;
+    }
+
+    * {
+    box-sizing: border-box;
+    }
+
+/*body {
+    font-family: Arial;
+    margin: 0 auto;*/ /* Center website */
+    /*max-width: 800px;*/ /* Max width */
+    /*padding: 20px;
+}*/
+/**/
+.heading {
+    font-size: 25px;
+    margin-right: 25px;
+}
+
+.fa {
+    font-size: 25px;
+}
+
+.checked {
+    color: orange;
+}
+
+/* Three column layout */
+.side {
+    float: left;
+    width: 15%;
+    margin-top: 10px;
+}
+
+.middle {
+    float: left;
+    width: 70%;
+    margin-top: 10px;
+}
+
+/* Place text to the right */
+.right {
+    text-align: right;
+}
+
+/* Clear floats after the columns */
+.row:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Responsive layout - make the columns stack on top of each other instead of next to each other */
+@*@media (max-width: 400px) {
+    .side, .middle {
+        width: 100%;
+    }
+    /* Hide the right column on small screens */
+    .right {
+        display: none;
+    }
+}*@
+
+</style>
+
+<p>@Message</p>
+
+@if (reviews == null)
+{
+    <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+
+}
+else
+{
+    @if (product == null)
+    {
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+        @Message
+
+    }
+    else
+    {
+        @if (reviews.Count() >= 1)
+        {
+            <span class="heading">Rating de Usuarios</span>
+            @if (@Math.Round(avgRate, MidpointRounding.AwayFromZero) == 1)
+            {
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+            }
+            else if (@Math.Round(avgRate, MidpointRounding.AwayFromZero) == 2)
+            {
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+            }
+            else if (@Math.Round(avgRate, MidpointRounding.AwayFromZero) == 3)
+            {
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+            }
+            else if (@Math.Round(avgRate, MidpointRounding.AwayFromZero) == 4)
+            {
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star"></span>
+            }
+            else if (@Math.Round(avgRate, MidpointRounding.AwayFromZero) == 5)
+            {
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+                <span class="fa fa-star checked"></span>
+            }
+            else
+            {
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+                <span class="fa fa-star"></span>
+            }
+            <p>@avgRate es el promedio basado en @reviews.Count() reseñas.</p>
+            <hr style="border:3px solid #f1f1f1">
+        }
+    }
+
+
+    <div class="jumbotron">
+        <h1 class="display-4">@product.ProductName</h1>
+        <img src=@product.ImageUrl class="img-fluid" alt="Responsive image">
+        <p class="lead">@product.Description</p>
+        <hr class="my-4">
+        <p><strong>Categoria: </strong>@product.CategoryName</p>
+        <p><strong>Precio: </strong>@product.Price</p>
+        <p><strong>Descuento: </strong>@product.Discount</p>
+        <p><strong>Precio con descuento: </strong>@Math.Round((product.Price - (product.Price * product.Discount / 100)), 2, MidpointRounding.ToEven)</p>
+        <AuthorizeView>
+            <Authorized>
+                <label>Cantidad:</label>
+                <input type="number" @bind="@product.Quantity" class="form-control col-md-4" />
+                <br />
+                <button class="btn btn-success" @onclick="SaveItem">Agregar al carrito</button>
+                <a class="btn btn-dark" href="/productsCatalog" role="button">Regresar</a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (reviews.Where(x => x.UserName == userName).FirstOrDefault() == null)
+    {
+        <div class="jumbotron">
+            <EditForm Model="@review" OnSubmit="InsertReview">
+                <div class="form-group">
+                    <label>Calificacion</label>
+                    <input type="number" class="form-control" @bind="review.Rate">
+                </div>
+                <div class="form-group">
+                    <label>Comentario</label>
+                    <textarea class="form-control" @bind="review.Comment"></textarea>
+                </div>
+                <button type="submit" class="btn btn-warning">Agregar comentario</button>
+            </EditForm>
+        </div>
+    }
+    else
+    {
+        <p>Ya realizaste un comentario</p>
+
+    }
+    <br />
+    <br />
+
+    @if (reviews == null)
+    {
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+
+    }
+    else
+    {
+        @if (reviews.Count() < 1)
+        {
+            <div class="container">
+                <a>Sin reseñas</a>
+            </div>
+
+        }
+        else
+        {
+            <br />
+            <br />
+            <h3>Reseñas</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Calificacion</th>
+                        <th scope="col">Comentario</th>
+                        <th scope="col">Usuario</th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var review in reviews)
+                    {
+                        <tr>
+                            <td>@review.Rate <span class="fa fa-star checked"></span></td>
+                            <td>@review.Comment</td>
+                            <td>@review.UserName</td>
+                            @if (userName == review.UserName)
+                            {
+                                <td><button class="btn btn-danger" @onclick="@(e => DeleteReview(e, review.Id))">Eliminar</button></td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+}
+
+
+
+@code {
+    [Parameter]
+    public int idProduct { get; set; }
+
+    private Models.ShoppingCart product = new Models.ShoppingCart();
+    public List<Models.ShoppingCart> products { get; set; }
+
+    private Models.Review review = new Models.Review();
+    public List<Models.Review> reviews { get; set; }
+
+
+    public string Message { get; set; }
+
+    public string userName = string.Empty;
+    public double avgRate = 0;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            product = await ShoppingCartService.GetProductCatalogDetails(idProduct);
+            reviews = await ReviewService.GetReviewByProduct(idProduct);
+            avgRate = await GetRating();
+            var authState = await authenticationStateTask;
+            var user = authState.User;
+
+            if (user.Identity.IsAuthenticated)
+            {
+                userName = user.Claims.FirstOrDefault(
+                c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (userName == null)
+                {
+                    userName = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
+                }
+            }
+
+            products = await oLocalStore.GetItemAsync<List<Models.ShoppingCart>>("List");
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+    }
+
+    public async void SaveItem()
+    {
+        try
+        {
+            //product.Subtotal = product.Price * product.Quantity;
+            product.Subtotal = ((product.Price - (product.Price * product.Discount / 100)) * product.Quantity);
+            product.UsernameOrder = userName;
+            products.Add(product);
+            await oLocalStore.SetItemAsync("List", products);
+            NavigationManager.NavigateTo("/productsCatalog");
+        }
+        catch (Exception ex)
+        {
+
+            Message = ex.Message;
+        }
+    }
+
+    public async void InsertReview()
+    {
+        review.UserName = userName;
+        review.ProductId = idProduct;
+        var postData = JsonConvert.SerializeObject(review);
+        HttpResponseMessage result;
+        result = await ReviewService.InsertReview(postData);
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/productsCatalog");
+        }
+        else
+        {
+            Message = "Error insertando comentario. " + result.Headers.ToString();
+        }
+    }
+
+    protected async Task DeleteReview(MouseEventArgs e, int id)
+    {
+        HttpResponseMessage result;
+        result = await ReviewService.DeleteReview(id);
+
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/productCatalogDetails/" + idProduct, forceLoad: true);
+        }
+        else
+        {
+            Message = "Error eliminando el registro" + result.StatusCode.ToString();
+        }
+    }
+
+    public async Task<double> GetRating()
+    {
+        int star5 = reviews.Where(x => x.Rate == 5).Count();
+        int star4 = reviews.Where(x => x.Rate == 4).Count();
+        int star3 = reviews.Where(x => x.Rate == 3).Count();
+        int star2 = reviews.Where(x => x.Rate == 2).Count();
+        int star1 = reviews.Where(x => x.Rate == 1).Count();
+
+        double rating = await Task.FromResult((double)(5 * star5 + 4 * star4 + 3 * star3 + 2 * star2 + 1 * star1) / (star1 + star2 + star3 + star4 + star5));
+
+        rating = Math.Round(rating, 1);
+
+        return rating;
+    }
+}

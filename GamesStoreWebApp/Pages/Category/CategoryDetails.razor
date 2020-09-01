@@ -1,0 +1,48 @@
+﻿@page "/categoryDetails/{idCategory:int}"
+@inject ICategoryService CategoryService
+
+<h3>Categoria Detalle</h3>
+
+@if (category == null)
+{
+    <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+
+    @if (@Message != null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @Message
+        </div>
+    }
+
+}
+else
+{
+    <div class="jumbotron">
+        <p><strong>Categoria: </strong>@category.CategoryName</p>
+        <p><strong>Precio: </strong>@category.Description</p>
+    </div>
+}
+
+
+@code {
+    [Parameter]
+    public int idCategory { get; set; }
+
+    private Category category = new Category();
+    public string Message { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            category = await CategoryService.GetCategoryDetails(idCategory);
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+
+    }
+}

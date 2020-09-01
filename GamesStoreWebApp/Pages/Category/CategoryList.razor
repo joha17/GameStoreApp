@@ -1,0 +1,87 @@
+﻿@page "/categories"
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+
+
+<h3>Categorias</h3>
+
+@if (@Message != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @Message
+    </div>
+}
+
+<div>
+    <a class="btn btn-success" href="categoryInsert" role="button">Agregar Categoria</a>
+</div>
+<br />
+
+@if (categories == null)
+{
+    <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">Descricion</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var category in categories)
+            {
+                <tr>
+                    <td>@category.CategoryName</td>
+                    <td>@category.Description</td>
+                    <td><a class="btn btn-warning" href="categoryUpdate/@category.IdCategory" role="button">Editar</a></td>
+                    <td><a class="btn btn-info" href="categoryDetails/@category.IdCategory" role="button">Detalle</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    public IEnumerable<Category> categories { get; set; }
+    public string Message { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await authenticationStateTask;
+            var user = authState.User;
+            if (user.Identity.IsAuthenticated)
+            {
+                categories = await CategoryService.GetAllCategories();
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/logout");
+            }
+
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("The input does not contain any JSON tokens"))
+            {
+                NavigationManager.NavigateTo("/logout");
+            }
+            else
+            {
+                Message = ex.Message;
+            }
+        }
+    }
+}

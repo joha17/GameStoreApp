@@ -1,0 +1,52 @@
+﻿@page "/categoryUpdate/{idCategory:int}"
+@using Newtonsoft.Json;
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+
+<h3>Actualizar Categoria</h3>
+
+<EditForm Model="@category" OnSubmit="Update">
+    @*<form @onsubmit="Update">*@
+        <div class="form-group">
+            <label>Descripcion</label>
+            <input type="text" class="form-control" @bind="category.CategoryName">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" @bind="category.Description" rows="3"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-warning">Actualizar</button>
+        <a class="btn btn-dark" href="/categories" role="button">Regresar</a>
+    @*</form>*@
+</EditForm>
+
+@code {
+
+    [Parameter]
+    public int idCategory { get; set; }
+
+    private Category category = new Category();
+    public string Message { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        category = await CategoryService.GetCategoryDetails(idCategory);
+    }
+
+    protected async Task Update()
+    {
+        bool result;
+        var postData = JsonConvert.SerializeObject(category);
+        result = await CategoryService.UpdateCategory(postData, category.IdCategory);
+        if (result == true)
+        {
+            NavigationManager.NavigateTo("/categories", forceLoad: true);
+        }
+        else
+        {
+            Message = "Error actualizando el registro. ";
+        }
+    }
+
+}

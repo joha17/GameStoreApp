@@ -1,0 +1,153 @@
+﻿@page "/orderDetails/{orderId:int}"
+@inject Blazored.LocalStorage.ILocalStorageService oLocalStore
+@inject NavigationManager NavigationManager
+@inject IOrderDetailsService OrderDetailsService
+@inject IUserAddressService UserAddressService
+
+
+<h3>Detalle de la Orden</h3>
+@if (@Message != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @Message
+    </div>
+}
+@if (orderDetails.Count() == 0)
+{
+    <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+}
+else
+{
+    <a class="btn btn-dark" href="myOrders" role="button">Regresar</a>
+    <br>
+    <br />
+    <div class="jumbotron jumbotron-fluid">
+        <div class="container">
+            <h3>Orden #@orderDetails.FirstOrDefault().OrderId</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Id</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Monto</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in orderDetails)
+                    {
+                        <tr>
+                            <td>@order.IdProduct</td>
+                            <td>@order.ProductName</td>
+                            <td>@order.Quantity</td>
+                            <td>@order.Amount</td>
+                            <td>@order.Subtotal</td>
+                        </tr>
+                    }
+                    <tr>
+                        <th scope="row">Total</th>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td scope="row">$@orderDetails.Sum(p => p.Subtotal)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Fecha de Orden</strong></p>
+            <p>@orderDetails.FirstOrDefault().OrderDate</p>
+            <br />
+            <p><strong>Estado de Orden</strong></p>
+            <p>@orderDetails.FirstOrDefault().OrderStatus</p>
+        </div>
+    </div>
+    <br />
+    if (userAddress == null)
+    {
+        <p><em>No tienes informacion de envio, favor agregar informacion de envio en tus Datos</em></p>
+    }
+    else
+    {
+        <div class="jumbotron jumbotron-fluid">
+            <div class="container">
+                <br />
+                <h4>Informacion de Envio</h4>
+                <div class="row">
+                    <div class="col-6 col-md-4">
+                        <p><strong>Pais:</strong></p>
+                        <p>@userAddress.CountryCode</p>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <p><strong>Ciudad:</strong></p>
+                        <p class="lead">@userAddress.City</p>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <p><strong>Codigo Postal</strong></p>
+                        <p class="lead">@userAddress.ZipCode</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 col-md-4">
+                        <p><strong>Direccion 1:</strong></p>
+                        <p>@userAddress.FirstAddress</p>
+                    </div>
+                    <div class="col-6 col-md-4">
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <p><strong>Direccion 2:</strong></p>
+                        <p>@userAddress.SecondAddress</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <br />
+    <br />
+    <button class="btn btn-danger" @onclick="@Delete">Eliminar</button>
+
+}
+
+@code {
+    [Parameter]
+    public int orderId { get; set; }
+
+    private List<Models.OrderDetail> orderDetails = new List<Models.OrderDetail>();
+    private UserAddress userAddress = new UserAddress();
+    public string Message { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            orderDetails = await OrderDetailsService.GetOrderDetails(orderId);
+            userAddress = await UserAddressService.GetUserAddressDetails(orderDetails.FirstOrDefault().UserName.ToString());
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+
+    }
+
+    protected async Task Delete()
+    {
+        HttpResponseMessage result;
+        result = await OrderDetailsService.DeleteOrderDetails(orderId);
+
+        if (result.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/myOrders", forceLoad: true);
+        }
+        else
+        {
+            Message = "Error eliminando el registro" + result.StatusCode.ToString();
+        }
+
+    }
+
+}

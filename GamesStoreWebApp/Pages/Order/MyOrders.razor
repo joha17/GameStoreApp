@@ -1,0 +1,111 @@
+﻿@page "/myOrders"
+@inject Blazored.LocalStorage.ILocalStorageService oLocalStore
+@inject NavigationManager NavigationManager
+@inject IOrderDetailsService OrderDetailsService
+
+<h3>Mis Ordenes</h3>
+
+
+@if (@Message != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @Message
+    </div>
+}
+
+@if (groupList == null)
+{
+    <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+
+}
+else
+{
+    @foreach (var keyList in groupList)
+    {
+        <table class="table table-dark">
+
+            <thead>
+                <tr>
+                    <th scope="col">#Orden @keyList.FirstOrDefault().OrderId</th>
+                    <th scope="col">Producto</th>
+                    <th scope="col">Cantidad</th>
+                    <th scope="col">Subtotal</th>
+                </tr>
+            </thead>
+            @foreach (var item in keyList)
+            {
+                <tbody>
+                    <tr>
+                        <td></td>
+                        <td>@item.ProductName</td>
+                        <td>@item.Quantity</td>
+                        <td>$@item.Subtotal</td>
+                    </tr>
+                </tbody>
+            }
+            <tbody>
+                <tr>
+                    <td>Total</td>
+                    <td></td>
+                    <td></td>
+                    <td>$@keyList.Sum(x => x.Subtotal)</td>
+                </tr>
+            </tbody>
+            <tbody>
+                <tr>
+                    <td>Estado: @keyList.FirstOrDefault().OrderStatus</td>
+                    <td>Fecha de compra: @keyList.FirstOrDefault().OrderDate</td>
+                    <td>Usuario: @keyList.FirstOrDefault().UserName</td>
+                    <td><a class="btn btn-outline-warning" href="orderDetails/@keyList.FirstOrDefault().OrderId" role="button">Detalle</a></td>
+                </tr>
+            </tbody>
+
+
+        </table>
+     }
+}
+
+@code {
+    [Parameter]
+    public string username { get; set; }
+
+    private List<Models.OrderDetail> orderDetails = new List<Models.OrderDetail>();
+    public string Message { get; set; }
+    public IOrderedEnumerable<IGrouping<int, Models.OrderDetail>> groupList;
+
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await authenticationStateTask;
+            var user = authState.User;
+            username = user.Claims.FirstOrDefault(
+            c => c.Type == System.Security.Claims.ClaimTypes.Name)?.Value;
+            if (username == null)
+            {
+                username = user.Claims.FirstOrDefault(c => c.Type == "sub").Value;
+            }
+
+            orderDetails = await OrderDetailsService.GetOrderDetailsByUser(username);
+
+            var dsd = orderDetails
+                            .GroupBy(u => u.OrderId)
+                            .Select(grp => grp.ToList())
+                            .ToList();
+            groupList = from Order in orderDetails
+                        group Order by Order.OrderId into newGroup
+                        orderby newGroup.Key
+                        select newGroup;
+
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+        }
+
+    }
+}

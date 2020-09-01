@@ -1,0 +1,23 @@
+﻿@inject ICategoryService CategoryService
+
+<select class="form-control" @onchange="OnFilterChanged">
+    <option value="0">--Seleccione una Categoria--</option>
+    @foreach (var category in CategoryList)
+    {
+        <option selected value="@category.IdCategory"> @category.CategoryName </option>
+    }
+</select>
+
+@code
+{
+    public List<Category> CategoryList = new List<Category>();
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+            CategoryList = await CategoryService.GetAllCategoriesCatalog();
+        
+    }
+
+}
